@@ -10,24 +10,64 @@ public class JudgeDate {
     public static boolean judgeDate(String date) {
         String date_str = date;
         int length = date_str.length();
-        if (length != 10 && length != 11) {
+        // 判断日期字符串长度是否合理
+        if (length < 8 || length > 11) {
             return false;
         }
-        if (length == 11) {
-            if (date_str.charAt(4) == '年' && date_str.charAt(7) == '月' && date_str.charAt(10) == '日') {
-                date_str = date_str.substring(0, 4) + "-" + date_str.substring(5, 7) + "-" + date_str.substring(8, 10);
-            } else {
+        // 判断日期字符串的每个字符是否合法, 并初步判断日期格式类型
+        char c = ' ';
+        /**
+         * 1 1 x ==>> 代表 YYYY-MM-DD 格式 ==> 并且 x 代表两个'-' 的索引位置之差
+         * 2 2 y ==>> 代表 YYYY/MM/DD 格式 ==> 并且 y 代表两个'/' 的索引位置之差
+         * x y z ==>> 代表 YYYY年MM月DD日 并且 xyz(z > y > z)分别为'年' '月' '日'字符的索引位置
+         */
+        int[] indexes = new int[3];
+        for (int i = 0; i < length; i++) {
+            c = date_str.charAt(i);
+            if (c == '-' || c == '/') {
+                int flag = (c == '-') ? 1 : 2;
+                if(i == 0 || i == length - 1 || (indexes[0] != 0 && indexes[0] != flag)) {
+                    return false;
+                }
+                if (indexes[0] == 0) {
+                    indexes[0] = flag;
+                    indexes[2] = i;
+                } else if (indexes[0] == flag && indexes[1] == 0) {
+                    indexes[1] = flag;
+                    indexes[2] = i - indexes[2];
+                    if (indexes[2] <= 1) {
+                        return false;
+                    }
+                } else { // 出现两次以上的'-'或'/'则日期格式错误
+                    return false;
+                }
+            } else if (c == '年') {
+                if (i == 0 || indexes[0] != 0) {
+                    return false;
+                }
+                indexes[0] = i;
+            } else if (c == '月') {
+                if (indexes[1] != 0) {
+                    return false;
+                }
+                indexes[1] = i;
+            } else if (c == '日') {
+                if (i != length - 1 || indexes[2] != 0) {
+                    return false;
+                }
+                indexes[2] = i;
+            } else if (c < '0' || c > '9') {
                 return false;
             }
         }
-        if (length == 10) {
-            if ((date_str.charAt(4) == date_str.charAt(7)) && (date_str.charAt(4) == '-' || date_str.charAt(7) == '/')) {
-                if (date_str.charAt(4) == '/') {
-                    date_str = date_str.replaceAll("/", "-");
-                }
-            }else {
-                return false;
-            }
+        // 统一处理为 YYYY-MM-DD日期格式类型
+        if (indexes[0] == 1 && indexes[1] == 1) {
+        } else if (indexes[0] == 2 && indexes[1] == 2) {
+            date_str = date_str.replaceAll("/", "-");
+        } else if ((indexes[0] != 0) && (indexes[1] > indexes[0] + 1) && (indexes[2] > indexes[1] + 1) && (indexes[2] == length - 1) ) {
+            date_str = date_str.substring(0, indexes[0]) + "-" + date_str.substring(indexes[0] + 1, indexes[1]) + "-" + date_str.substring(indexes[1] + 1, indexes[2]);
+        } else {
+            return false;
         }
         String[] yearMonthDay = date_str.split("-");
         try {
@@ -40,6 +80,8 @@ public class JudgeDate {
             }
         } catch (NumberFormatException e) {
             // e.printStackTrace();
+            return false;
+        } catch (Exception e) {
             return false;
         }
         return false;
